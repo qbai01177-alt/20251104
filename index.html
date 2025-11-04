@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滑出式選單封面</title>
+    <style>
+        /* 基本樣式重設 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            overflow-x: hidden; /* 防止水平滾動條出現 */
+            font-size: 18px; /* 提高基礎字體大小 */
+        }
+
+        /* 側邊選單容器 */
+        #sidebar-menu {
+            position: fixed; /* 固定在畫面上 */
+            top: 0;
+            left: -200px; /* 將選單大部分藏在畫面左邊 (250px - 50px) */
+            width: 250px; /* 選單完整寬度 */
+            height: 100%;
+            background-color: #2c3e50;
+            padding-top: 60px;
+            transition: left 0.3s ease-in-out; /* 讓滑出效果有動畫 */
+            z-index: 1000; /* 確保在最上層 */
+        }
+
+        /* 當滑鼠懸停在選單上時，將其完全顯示 */
+        #sidebar-menu:hover {
+            left: 0;
+        }
+
+        /* 選單列表樣式 */
+        #sidebar-menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* 選單項目連結樣式 */
+        #sidebar-menu ul li a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: #ecf0f1;
+            font-size: 18px;
+            transition: background-color 0.2s;
+        }
+
+        /* 滑鼠移到選單項目上的效果 */
+        #sidebar-menu ul li a:hover {
+            background-color: #34495e;
+        }
+
+        /* 主要內容區域 */
+        #main-content {
+            margin-left: 50px; /* 留出空間給收合的選單把手 */
+            padding: 20px 40px;
+            transition: margin-left 0.3s ease-in-out; /* 配合選單滑出，內容也跟著移動 */
+        }
+
+        /* 當選單展開時，將主內容向右推 */
+        #sidebar-menu:hover + #main-content {
+            margin-left: 250px;
+        }
+
+        /* 內容區塊 */
+        .content-section {
+            display: none; /* 預設隱藏所有內容區塊 */
+        }
+
+        /* 讓被啟用的內容區塊顯示出來 */
+        .content-section.active {
+            display: block;
+        }
+
+        /* --- 以下是原有的測驗樣式 --- */
+        #quiz-container {
+            background-color: #fff;
+            padding: 40px; /* 增加內邊距 */
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 95%;
+            max-width: 800px; /* 增加最大寬度 */
+            margin: 20px auto; /* 讓測驗容器在內容區置中 */
+            position: relative;
+        }
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-top: 0;
+        }
+        .question {
+            margin-bottom: 25px; /* 增加問題間距 */
+            display: none; /* 預設隱藏所有問題 */
+            animation: fadeIn 0.5s ease-in-out; /* 動感效果 */
+        }
+        .question h3 {
+            margin-bottom: 10px;
+            font-size: 1.4em; /* 放大問題標題 */
+        }
+        /* 將選項的樣式應用到 label 元素上 */
+        .options label {
+            margin-bottom: 8px;
+            padding: 15px; /* 增加選項框的內距 */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s; /* 移除點擊特效 */
+            display: block; /* 讓 label 佔滿父容器的寬度 */
+        }
+        label {
+            cursor: pointer;
+            /* 移除原 label 樣式，因為現在 .options label 會處理 */
+            /* margin-left: 5px; */
+            /* width: 100%; */
+            /* display: inline-block; */
+        }
+        /* 當選項被選中時的樣式 */
+        .options label:has(input:checked) {
+            background-color: #e7f3ff;
+            border-color: #007bff;
+        }
+        /* 調整 radio input 與文字的間距 */
+        .options label input[type="radio"] {
+            margin-right: 8px;
+            vertical-align: middle; /* 讓 radio button 與文字對齊 */
+        }
+        .navigation-btns {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: block;
+            width: 48%;
+            padding: 15px; /* 增加按鈕內距 */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em; /* 讓按鈕字體與基礎字體一致 */
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .nav-btn:hover {
+            background-color: #0056b3;
+        }
+        .nav-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #results {
+            display: none; /* 預設隱藏結果 */
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        #results h2 {
+            text-align: center;
+        }
+        #score {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #0056b3;
+            margin-bottom: 20px;
+        }
+        #result-feedback {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        #result-character {
+            font-size: 60px;
+        }
+        #score-comment {
+            font-size: 18px;
+        }
+        .result-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .result-item.correct {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        .result-item.incorrect {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<!-- 引入 canvas-confetti 函式庫 -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<body>
+    <!-- 左側滑出式選單 -->
+    <nav id="sidebar-menu">
+        <ul>
+            <!-- data-target 屬性用來對應內容區塊的 id -->
+            <li><a href="#" data-target="content-1">選單一</a></li>
+            <li><a href="#" data-target="content-2">選單二</a></li>
+            <li><a href="#" data-target="content-3">小測驗</a></li>
+            <li><a href="#" data-target="content-4">選單四</a></li>
+        </ul>
+    </nav>
+
+    <!-- 右側主要內容區域 -->
+    <main id="main-content">
+        <div id="content-1" class="content-section">
+            <h1>封面</h1>
+            <p>這是一個測試</p>
+        </div>
+        <div id="content-2" class="content-section">
+            <h1>這裡是選單二的內容</h1>
+            <p>之後您可以在這裡放入您的內容。</p>
+        </div>
+
+        <!-- 第三個選單的內容：小測驗 -->
+        <div id="content-3" class="content-section">
+            <div id="quiz-container">
+                <h1>程式小測驗</h1>
+                <div id="quiz-body">
+
+        <!--
+            原有的問題 HTML 結構保持不變，
+            為了簡潔，diff 中省略了這部分。
+            實際檔案中，問題1到問題5的 div 會在這裡。
+        -->
+        <!-- 問題 1 -->
+        <div class="question" data-question-index="0">
+            <h3>1. 哪種程式語言通常用於網頁前端開發？</h3>
+            <div class="options">
+                <label for="q0a"><input type="radio" name="q0" value="A" id="q0a">A) Python</label>
+                <label for="q0b"><input type="radio" name="q0" value="B" id="q0b">B) Java</label>
+                <label for="q0c"><input type="radio" name="q0" value="C" id="q0c">C) JavaScript</label>
+                <label for="q0d"><input type="radio" name="q0" value="D" id="q0d">D) C++</label>
+            </div>
+        </div>
+
+        <!-- 問題 2 -->
+        <div class="question" data-question-index="1">
+            <h3>2. HTML 的全名是什麼？</h3>
+            <div class="options">
+                <label for="q1a"><input type="radio" name="q1" value="A" id="q1a">A) HyperText Markup Language</label>
+                <label for="q1b"><input type="radio" name="q1" value="B" id="q1b">B) High-Level Text Machine Language</label>
+                <label for="q1c"><input type="radio" name="q1" value="C" id="q1c">C) Hyperlink and Text Markup Language</label>
+                <label for="q1d"><input type="radio" name="q1" value="D" id="q1d">D) Home Tool Markup Language</label>
+            </div>
+        </div>
+
+        <!-- 問題 3 -->
+        <div class="question" data-question-index="2">
+            <h3>3. CSS 主要用於什麼？</h3>
+            <div class="options">
+                <label for="q2a"><input type="radio" name="q2" value="A" id="q2a">A) 處理伺服器端邏輯</label>
+                <label for="q2b"><input type="radio" name="q2" value="B" id="q2b">B) 定義網頁的結構</label>
+                <label for="q2c"><input type="radio" name="q2" value="C" id="q2c">C) 操作資料庫</label>
+                <label for="q2d"><input type="radio" name="q2" value="D" id="q2d">D) 設定網頁的樣式和佈局</label>
+            </div>
+        </div>
+
+        <!-- 問題 4 -->
+        <div class="question" data-question-index="3">
+            <h3>4. 在 JavaScript 中，哪個關鍵字用於宣告一個值不會改變的常數？</h3>
+            <div class="options">
+                <label for="q3a"><input type="radio" name="q3" value="A" id="q3a">A) var</label>
+                <label for="q3b"><input type="radio" name="q3" value="B" id="q3b">B) let</label>
+                <label for="q3c"><input type="radio" name="q3" value="C" id="q3c">C) const</label>
+                <label for="q3d"><input type="radio" name="q3" value="D" id="q3d">D) static</label>
+            </div>
+        </div>
+
+        <!-- 問題 5 -->
+        <div class="question" data-question-index="4">
+            <h3>5. 什麼是 API？</h3>
+            <div class="options">
+                <label for="q4a"><input type="radio" name="q4" value="A" id="q4a">A) 一種程式語言</label>
+                <label for="q4b"><input type="radio" name="q4" value="B" id="q4b">B) 應用程式介面 (Application Programming Interface)</label>
+                <label for="q4c"><input type="radio" name="q4" value="C" id="q4c">C) 一種資料庫系統</label>
+                <label for="q4d"><input type="radio" name="q4" value="D" id="q4d">D) 一個網頁伺服器</label>
+            </div>
+        </div>
+
+        <div class="navigation-btns">
+            <button type="button" id="prev-btn" class="nav-btn">上一題</button>
+            <button type="button" id="next-btn" class="nav-btn">下一題</button>
+        </div>
+                </div>
+
+                <div id="results">
+                    <h2>測驗結果</h2>
+                    <div id="result-feedback">
+                        <div id="result-character"></div>
+                        <div id="score"></div>
+                        <div id="score-comment"></div>
+                    </div>
+                    <div id="review"></div>
+                    <button type="button" id="restart-btn" class="nav-btn" style="width: 100%; margin-top: 20px; display: none;">再來一次</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-4" class="content-section">
+            <h1>這裡是選單四的內容</h1>
+            <p>之後您可以在這裡放入您的內容。</p>
+        </div>
+    </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 新增的選單切換邏輯 ---
+        const menuLinks = document.querySelectorAll('#sidebar-menu a');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        // 預設顯示第三個選單的內容 (小測驗)
+        const defaultContent = document.getElementById('content-3');
+        if (defaultContent) {
+            defaultContent.classList.add('active');
+        }
+
+        // --- 原有的測驗邏輯 ---
+        const questions = document.querySelectorAll('.question');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const quizBody = document.getElementById('quiz-body');
+        const resultsContainer = document.getElementById('results');
+        const scoreEl = document.getElementById('score');
+        const reviewEl = document.getElementById('review');
+        const characterEl = document.getElementById('result-character');
+        const commentEl = document.getElementById('score-comment');
+        const restartBtn = document.getElementById('restart-btn');
+
+        const correctAnswers = ['C', 'A', 'D', 'C', 'B'];
+        let userAnswers = new Array(questions.length).fill(null);
+        let currentQuestionIndex = 0;
+
+        function saveProgress() {
+            const progress = {
+                userAnswers: userAnswers,
+                currentQuestionIndex: currentQuestionIndex
+            };
+            localStorage.setItem('quizProgress', JSON.stringify(progress));
+        }
+
+        function loadProgress() {
+            const savedProgress = localStorage.getItem('quizProgress');
+            if (savedProgress) {
+                const progress = JSON.parse(savedProgress);
+                userAnswers = progress.userAnswers;
+                currentQuestionIndex = progress.currentQuestionIndex;
+
+                // 重新選取已儲存的答案
+                userAnswers.forEach((answer, index) => {
+                    if (answer !== null) {
+                        const selectedInput = document.querySelector(`input[name="q${index}"][value="${answer}"]`);
+                        if (selectedInput) selectedInput.checked = true;
+                    }
+                });
+            }
+        }
+
+        function showQuestion(index) {
+            questions.forEach((question, i) => {
+                question.style.display = (i === index) ? 'block' : 'none';
+            });
+            prevBtn.disabled = index === 0;
+            nextBtn.textContent = (index === questions.length - 1) ? '查看結果' : '下一題';
+        }
+
+        function saveAnswer() {
+            const selectedOption = document.querySelector(`input[name="q${currentQuestionIndex}"]:checked`);
+            if (selectedOption) {
+                userAnswers[currentQuestionIndex] = selectedOption.value;
+            }
+        }
+
+        function showResults() {
+            quizBody.style.display = 'none';
+            restartBtn.style.display = 'block';
+            resultsContainer.style.display = 'block';
+            // document.body.style.overflow = 'auto'; // 移除此行，由主內容區自行處理滾動
+            
+            let score = 0;
+            reviewEl.innerHTML = ''; // 清空之前的結果
+
+            questions.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const correctAnswer = correctAnswers[index];
+                const isCorrect = userAnswer === correctAnswer;
+                if (isCorrect) {
+                    score++;
+                }
+
+                const questionTitle = question.querySelector('h3').textContent;
+                const optionLabels = question.querySelectorAll('.options label');
+                let userAnswerText = '未作答';
+                let correctAnswerText = '';
+
+                optionLabels.forEach(label => {
+                    const input = label.querySelector('input');
+                    if (input.value === userAnswer) {
+                        userAnswerText = label.textContent.trim();
+                    }
+                    if (input.value === correctAnswer) {
+                        correctAnswerText = label.textContent.trim();
+                    }
+                });
+
+                const resultItem = document.createElement('div');
+                resultItem.classList.add('result-item', isCorrect ? 'correct' : 'incorrect');
+                resultItem.innerHTML = `
+                    <strong>${questionTitle}</strong>
+                    <p>你的答案：${userAnswerText}</p>
+                    ${!isCorrect ? `<p>正確答案：${correctAnswerText}</p>` : ''}
+                `;
+                reviewEl.appendChild(resultItem);
+            });
+
+            scoreEl.textContent = `總分：${score} / ${questions.length}`;
+
+            // --- 特效 ---
+            if (score >= 4) {
+                // 答對4-5題，放煙火
+                const duration = 3 * 1000; // 持續 3 秒
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+                function randomInRange(min, max) {
+                    return Math.random() * (max - min) + min;
+                }
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                    }
+
+                    const particleCount = 50 * (timeLeft / duration);
+                    // 從左側和右側發射
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                }, 250);
+            } else if (score >= 0 && score <= 3) {
+                // 答對1-3題，下雨效果
+                const rainDuration = 2 * 1000; // 持續 2 秒
+                const rainEnd = Date.now() + rainDuration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 2,
+                        angle: 270,
+                        spread: 90,
+                        origin: { x: Math.random(), y: -0.1 },
+                        colors: ['#a0c4ff', '#9bf6ff', '#bdb2ff'],
+                        shapes: ['circle'],
+                    });
+                    if (Date.now() < rainEnd) { requestAnimationFrame(frame); }
+                }());
+            }
+            // --- 特效結束 ---
+
+            let character = '🤔';
+            let comment = '再接再厲，下次會更好！';
+
+            if (score === 5) {
+                character = '🎉';
+                comment = '太棒了！完全正確，你真是個程式小天才！';
+            } else if (score === 4) {
+                character = '😊';
+                comment = '表現優異！只差一點就滿分了，下次加油！';
+            } else if (score === 3) {
+                character = '🙂';
+                comment = '還不錯喔，繼續努力，知識就是力量！';
+            } else if (score >= 1 && score <= 2) { // 新增對 1-2 分的處理
+                character = '🤔';
+                comment = '再接再厲，下次會更好！';
+            } else if (score === 0) {
+                character = '🦆'; // 零鴨蛋
+                comment = '沒關係，從零開始也是一種學習！下次會更好！';
+            }
+
+            characterEl.textContent = character;
+            commentEl.textContent = comment;
+        }
+        
+        function restartQuiz() {
+            // 重設狀態
+            currentQuestionIndex = 0;
+            userAnswers.fill(null);
+            localStorage.removeItem('quizProgress'); // 清除儲存的進度
+
+            // 清除所有選項
+            document.querySelectorAll('input[type="radio"]').forEach(input => input.checked = false);
+
+            // 重設UI
+            resultsContainer.style.display = 'none';
+            restartBtn.style.display = 'none';
+            quizBody.style.display = 'block';
+            // document.body.style.overflow = 'hidden'; // 移除此行
+
+            showQuestion(0);
+        }
+
+        nextBtn.addEventListener('click', () => {
+            saveAnswer();
+            saveProgress();
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion(currentQuestionIndex);
+            } else {
+                showResults();
+                localStorage.removeItem('quizProgress'); // 測驗完成後清除進度
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            saveAnswer();
+            saveProgress();
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion(currentQuestionIndex);
+            }
+        });
+
+        restartBtn.addEventListener('click', restartQuiz);
+
+        // --- 新增的選單點擊事件 ---
+        menuLinks.forEach(link => {
+            link.addEventListener('click', function(event) {
+                event.preventDefault(); // 防止頁面跳轉
+
+                const targetId = this.getAttribute('data-target');
+                const targetSection = document.getElementById(targetId);
+
+                // 隱藏所有內容區塊
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                // 只顯示目標內容區塊
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+            });
+        });
+
+        // 頁面載入時，先載入進度，再顯示對應的題目
+        loadProgress();
+        showQuestion(currentQuestionIndex);
+    });
+</script>
+
+</body>
+</html>
